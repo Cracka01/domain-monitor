@@ -1,0 +1,3 @@
+# Drop static assets (icons, images, JS bundles) here. The directory is
+# included in the built wheel via setuptools `package-data` configured in
+# `pyproject.toml`.

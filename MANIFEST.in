@@ -1,0 +1,4 @@
+include README.md
+include LICENSE
+recursive-include src/domain_monitor/templates *.html
+recursive-include src/domain_monitor/static *

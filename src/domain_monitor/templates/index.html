@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Domain Monitor</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0f1117; --panel:#161a23; --panel2:#1d2230; --txt:#e6e9ef; --muted:#8a93a6;
+    --acc:#4f8cff; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --new:#a855f7; --border:#262c3a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+  header{padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  header h1{margin:0;font-size:18px;font-weight:600}
+  header .sp{flex:1}
+  main{padding:16px 20px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  label{color:var(--muted);font-size:12px}
+  input[type=text],input[type=number],input[type=password],select{background:var(--panel2);color:var(--txt);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit}
+  input[type=file]{color:var(--muted)}
+  button{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;font:inherit}
+  button.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--txt)}
+  button.danger{background:var(--err)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .stat{background:var(--panel2);padding:10px;border-radius:6px;border:1px solid var(--border)}
+  .stat .v{font-size:22px;font-weight:600}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;position:sticky;top:0;cursor:pointer;user-select:none;z-index:2}
+  tr:hover td{background:#1a2030}
+  .tag{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+  .t-active{background:rgba(34,197,94,.15);color:var(--ok)}
+  .t-parked{background:rgba(245,158,11,.15);color:var(--warn)}
+  .t-4xx{background:rgba(239,68,68,.12);color:var(--err)}
+  .t-5xx{background:rgba(239,68,68,.18);color:var(--err)}
+  .t-unreach{background:rgba(138,147,166,.18);color:var(--muted)}
+  .t-pending{background:rgba(79,140,255,.15);color:var(--acc)}
+  .t-new{background:rgba(168,85,247,.2);color:var(--new)}
+  .t-vt-malicious{background:rgba(239,68,68,.25);color:#fff;border:1px solid var(--err)}
+  .t-vt-suspicious{background:rgba(245,158,11,.2);color:var(--warn)}
+  .t-vt-clean{background:rgba(34,197,94,.15);color:var(--ok)}
+  .t-vt-unknown{background:rgba(138,147,166,.15);color:var(--muted)}
+  .progress{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:8px}
+  .progress > div{height:100%;background:var(--acc);transition:width .2s}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .toolbar input[type=text]{min-width:200px}
+  .alert{background:rgba(168,85,247,.12);border:1px solid var(--new);color:#e9d5ff;padding:10px;border-radius:6px;margin-bottom:14px}
+  .muted{color:var(--muted);font-size:12px}
+  a{color:var(--acc);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .tbox{max-height:65vh;overflow:auto;border:1px solid var(--border);border-radius:6px}
+  details summary{cursor:pointer;color:var(--muted)}
+  .pill-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted)}
+  .pill-dot.run{background:var(--ok);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ Domain Monitor</h1>
+  <span class="muted"><span id="runDot" class="pill-dot"></span><span id="runLbl">Idle</span></span>
+  <span class="muted">Last check: <b id="lastCheckLbl">—</b></span>
+  <span class="muted">Next run: <b id="nextRunLbl">—</b></span>
+  <span class="sp"></span>
+</header>
+
+<main>
+
+<div class="card">
+  <div class="row">
+    <div>
+      <label>Upload CSV / TXT of domains</label><br>
+      <input type="file" id="fileInput" accept=".csv,.txt">
+    </div>
+    <div>
+      <label>or paste a list</label><br>
+      <input type="text" id="pasteInput" placeholder="example.com, other.com" style="min-width:260px">
+    </div>
+    <button id="addBtn" class="secondary">Add</button>
+    <span class="sp"></span>
+    <button id="checkBtn">▶ Check now</button>
+    <button id="stopBtn" class="secondary" disabled>■ Stop</button>
+    <button id="exportBtn" class="secondary">⬇ Export CSV</button>
+    <button id="clearBtn" class="danger">🗑 Delete everything</button>
+  </div>
+  <div class="progress" style="display:none" id="progressBar"><div style="width:0%"></div></div>
+  <div class="muted" id="progressLbl" style="margin-top:6px"></div>
+
+  <details style="margin-top:10px">
+    <summary>⚙️ Settings</summary>
+    <div class="row" style="margin-top:10px">
+      <div><label>Concurrency</label><br><input type="number" id="cfgConc" min="1" max="100" style="width:80px"></div>
+      <div><label>Timeout (s)</label><br><input type="number" id="cfgTimeout" min="3" max="60" style="width:80px"></div>
+      <div><label>Auto-recheck (h)</label><br><input type="number" id="cfgInterval" min="1" max="48" step="0.5" style="width:80px"></div>
+      <button id="saveCfgBtn" class="secondary">Save</button>
+    </div>
+    <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+    <div style="margin-bottom:8px"><b>🔬 VirusTotal</b> <span class="muted">(checks each domain and IP against the VT threat database)</span></div>
+    <div class="row">
+      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="cfgVtEnabled"> Enable</label>
+      <div style="flex:1;min-width:280px">
+        <label>API key <span class="muted" id="vtKeyMask"></span></label><br>
+        <input type="password" id="cfgVtKey" placeholder="Paste your VirusTotal API key" style="width:100%">
+      </div>
+      <div><label>Req/min</label><br><input type="number" id="cfgVtRate" min="1" max="1000" style="width:80px"></div>
+      <div><label>Cache (h)</label><br><input type="number" id="cfgVtCache" min="0" max="720" step="1" style="width:80px"></div>
+      <button id="saveVtBtn" class="secondary">Save VT</button>
+      <button id="clearVtBtn" class="secondary" title="Remove stored API key">✕ Clear key</button>
+    </div>
+    <div class="muted" style="margin-top:6px">
+      Free VT account = <b>4 req/min, 500/day</b>. With a 24h cache, already-analysed domains do not consume quota. Get a free key at <a href="https://www.virustotal.com/gui/join-us" target="_blank" rel="noopener noreferrer">virustotal.com</a> (profile → API key).
+    </div>
+  </details>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="card">
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <input type="text" id="filterText" placeholder="🔎 Filter by domain or IP...">
+    <select id="filterStatus">
+      <option value="">All statuses</option>
+      <option value="ACTIVE">Active</option>
+      <option value="PARKED">Parked / For sale</option>
+      <option value="4XX">4xx error</option>
+      <option value="5XX">5xx error</option>
+      <option value="UNREACHABLE">Unreachable</option>
+      <option value="PENDING">Pending</option>
+    </select>
+    <select id="filterVt">
+      <option value="">VT: any</option>
+      <option value="MALICIOUS">VT: Malicious</option>
+      <option value="SUSPICIOUS">VT: Suspicious</option>
+      <option value="CLEAN">VT: Clean</option>
+      <option value="UNKNOWN">VT: Unknown</option>
+      <option value="PENDING">VT: Not checked</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="filterTransitions"> Only newly active</label>
+    <button id="clearAllNewBtn" class="secondary">Mark all as reviewed</button>
+    <span class="sp"></span>
+    <span class="muted" id="rowCount"></span>
+  </div>
+  <div class="tbox">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th data-sort="domain">Domain</th>
+          <th data-sort="status">Status</th>
+          <th data-sort="code">HTTP</th>
+          <th data-sort="ip">IP</th>
+          <th data-sort="vt_verdict">VirusTotal</th>
+          <th data-sort="title">Title / Notes</th>
+          <th data-sort="prev_status">Previous</th>
+          <th data-sort="last_checked">Last check</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <details>
+    <summary>ℹ️ How it works</summary>
+    <div class="muted" style="margin-top:8px;line-height:1.6">
+      <ul>
+        <li><b>Python backend (Flask + requests)</b>: performs real HTTP requests with no CORS limitation, reads 2xx/4xx/5xx codes, follows redirects and inspects the HTML to detect parking pages.</li>
+        <li><b>DNS resolution</b>: each domain is resolved to its IPv4 address; both fields are visible in the table and the exported CSV.</li>
+        <li><b>VirusTotal</b>: optional integration. Verdicts: <span class="tag t-vt-malicious">☠ MALICIOUS</span> 2+ engines flag the domain · <span class="tag t-vt-suspicious">⚠ SUSPICIOUS</span> 1 malicious or 2+ suspicious or very negative reputation · <span class="tag t-vt-clean">✓ CLEAN</span> no threats · <span class="tag t-vt-unknown">? UNKNOWN</span> no VT data. Free quota = 4 req/min, 500/day. With a 24h cache repeats do not consume quota.</li>
+        <li><b>Statuses:</b> <span class="tag t-active">Active</span> 2xx/3xx with real content · <span class="tag t-parked">Parked</span> domain for sale / placeholder · <span class="tag t-4xx">4xx</span> · <span class="tag t-5xx">5xx</span> · <span class="tag t-unreach">Unreachable</span> DNS / timeout / SSL.</li>
+        <li><b>Auto-recheck every N hours</b> (4 by default) runs in a background thread. It keeps working even if the browser is closed. State is persisted to SQLite (<code>monitor.db</code>).</li>
+        <li><b>Inactive → active transitions</b>: when a domain switches from 4xx / 5xx / UNREACHABLE / PARKED to ACTIVE it is tagged <span class="tag t-new">NEW</span> and appears in the highlighted alert.</li>
+      </ul>
+    </div>
+  </details>
+</div>
+
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+let cache = { domains: [], counts: {}, runner: {}, settings: {} };
+let sortKey = "domain", sortDir = 1;
+let pollTimer = null;
+
+function fmtDate(ts){ if(!ts) return "—"; return new Date(ts).toLocaleString(); }
+function statusTag(s){
+  const map = { ACTIVE:"t-active", PARKED:"t-parked", "4XX":"t-4xx", "5XX":"t-5xx", UNREACHABLE:"t-unreach", PENDING:"t-pending" };
+  return `<span class="tag ${map[s]||"t-unreach"}">${s||"—"}</span>`;
+}
+function vtTag(r){
+  const v = r.vt_verdict;
+  if(!v) return '<span class="muted">—</span>';
+  const map  = { MALICIOUS:"t-vt-malicious", SUSPICIOUS:"t-vt-suspicious", CLEAN:"t-vt-clean", UNKNOWN:"t-vt-unknown" };
+  const icon = { MALICIOUS:"☠", SUSPICIOUS:"⚠", CLEAN:"✓", UNKNOWN:"?" };
+  const m = r.vt_malicious||0, s = r.vt_suspicious||0;
+  const detail = (m||s) ? ` ${m}/${s}` : "";
+  const tip = `malicious=${m}, suspicious=${s}, harmless=${r.vt_harmless||0}, undetected=${r.vt_undetected||0}` + (r.vt_reputation!=null?`, reputation=${r.vt_reputation}`:"") + (r.vt_error?`, err=${r.vt_error}`:"");
+  return `<a href="https://www.virustotal.com/gui/domain/${encodeURIComponent(r.domain)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(tip)}"><span class="tag ${map[v]||"t-vt-unknown"}">${icon[v]||"?"} ${v}${detail}</span></a>`;
+}
+function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  if(!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.json();
+}
+
+async function refresh(){
+  try {
+    cache = await api("/api/state");
+    render();
+  } catch(e){ console.error(e); }
+}
+
+function render(){
+  // Settings (only if user is not editing the field)
+  const ae = document.activeElement?.id;
+  if(ae !== "cfgConc")     $("#cfgConc").value     = cache.settings.concurrency;
+  if(ae !== "cfgTimeout")  $("#cfgTimeout").value  = cache.settings.timeout;
+  if(ae !== "cfgInterval") $("#cfgInterval").value = cache.settings.interval_hours;
+  if(ae !== "cfgVtRate")   $("#cfgVtRate").value   = cache.settings.vt_rate_per_min;
+  if(ae !== "cfgVtCache")  $("#cfgVtCache").value  = cache.settings.vt_cache_hours;
+  if(ae !== "cfgVtEnabled")$("#cfgVtEnabled").checked = !!cache.settings.vt_enabled;
+  $("#vtKeyMask").textContent = cache.settings.vt_api_key_set ? `· saved: ${cache.settings.vt_api_key_mask}` : "· not set";
+
+  // Runner status
+  const r = cache.runner || {};
+  $("#runDot").className = "pill-dot" + (r.running?" run":"");
+  $("#runLbl").textContent = r.running ? "Checking…" : "Idle";
+  $("#lastCheckLbl").textContent = fmtDate(r.last_run);
+  $("#nextRunLbl").textContent = fmtDate(r.next_run);
+  $("#checkBtn").disabled = !!r.running;
+  $("#stopBtn").disabled  = !r.running;
+  const pb = $("#progressBar");
+  if(r.running && r.progress?.total){
+    pb.style.display = "block";
+    const pct = r.progress.done/r.progress.total*100;
+    pb.firstElementChild.style.width = pct.toFixed(1)+"%";
+    let lbl = `Checking ${r.progress.done}/${r.progress.total} — ${r.progress.current||""}`;
+    if(r.progress.vt_total){ lbl += ` · VT ${r.progress.vt_done||0}/${r.progress.vt_total}`; }
+    $("#progressLbl").textContent = lbl;
+  } else {
+    pb.style.display = "none";
+    $("#progressLbl").textContent = r.last_run ? `Last pass finished: ${fmtDate(r.last_run)}` : "";
+  }
+
+  // Stats
+  const c = cache.counts || {};
+  $("#stats").innerHTML = `
+    <div class="stat"><div class="l">Total</div><div class="v">${c.TOTAL||0}</div></div>
+    <div class="stat"><div class="l">Active</div><div class="v" style="color:var(--ok)">${c.ACTIVE||0}</div></div>
+    <div class="stat"><div class="l">Parked/For sale</div><div class="v" style="color:var(--warn)">${c.PARKED||0}</div></div>
+    <div class="stat"><div class="l">4xx errors</div><div class="v" style="color:var(--err)">${c["4XX"]||0}</div></div>
+    <div class="stat"><div class="l">5xx errors</div><div class="v" style="color:var(--err)">${c["5XX"]||0}</div></div>
+    <div class="stat"><div class="l">Unreachable</div><div class="v" style="color:var(--muted)">${c.UNREACHABLE||0}</div></div>
+    <div class="stat"><div class="l">Pending</div><div class="v" style="color:var(--acc)">${c.PENDING||0}</div></div>
+    <div class="stat" style="border-color:var(--new)"><div class="l">⚡ Newly active</div><div class="v" style="color:var(--new)">${c.NEW||0}</div></div>
+    <div class="stat" style="border-color:var(--err)"><div class="l">☠ VT Malicious</div><div class="v" style="color:var(--err)">${c.VT_MALICIOUS||0}</div></div>
+    <div class="stat" style="border-color:var(--warn)"><div class="l">⚠ VT Suspicious</div><div class="v" style="color:var(--warn)">${c.VT_SUSPICIOUS||0}</div></div>
+    <div class="stat"><div class="l">✓ VT Clean</div><div class="v" style="color:var(--ok)">${c.VT_CLEAN||0}</div></div>
+    <div class="stat"><div class="l">VT Not checked</div><div class="v" style="color:var(--muted)">${c.VT_PENDING||0}</div></div>
+  `;
+
+  // Transitions alert
+  const newOnes = cache.domains.filter(d=>d.is_new).map(d=>d.domain);
+  $("#alertBox").innerHTML = newOnes.length ? `
+    <div class="alert">
+      <b>⚡ ${newOnes.length} domain(s) just transitioned from INACTIVE to ACTIVE:</b><br>
+      ${newOnes.slice(0,30).map(d=>`<a href="https://${d}" target="_blank" rel="noopener noreferrer">${d}</a>`).join(" · ")}
+      ${newOnes.length>30?` … and ${newOnes.length-30} more`:""}
+      <br><span class="muted">These deserve priority manual review.</span>
+    </div>` : "";
+
+  // Table
+  const ft = $("#filterText").value.trim().toLowerCase();
+  const fs = $("#filterStatus").value;
+  const fv = $("#filterVt").value;
+  const fnew = $("#filterTransitions").checked;
+  let rows = cache.domains.slice();
+  if(ft)   rows = rows.filter(r=>r.domain.includes(ft) || (r.ip||"").includes(ft));
+  if(fs)   rows = rows.filter(r=>r.status===fs);
+  if(fv){
+    if(fv==="PENDING") rows = rows.filter(r=>!r.vt_verdict);
+    else               rows = rows.filter(r=>r.vt_verdict===fv);
+  }
+  if(fnew) rows = rows.filter(r=>r.is_new);
+  rows.sort((a,b)=>{
+    const va = a[sortKey]??"", vb = b[sortKey]??"";
+    if(va<vb) return -sortDir;
+    if(va>vb) return sortDir;
+    return 0;
+  });
+  // Pin to top: newly active > VT malicious > VT suspicious
+  const prio = r => (r.is_new?100:0) + (r.vt_verdict==="MALICIOUS"?50:0) + (r.vt_verdict==="SUSPICIOUS"?20:0);
+  rows.sort((a,b)=>prio(b)-prio(a));
+
+  const tbody = $("#tbl tbody");
+  tbody.innerHTML = rows.slice(0, 3000).map(r=>`
+    <tr>
+      <td>${r.is_new?'<span class="tag t-new">NEW</span> ':''}<a href="https://${r.domain}" target="_blank" rel="noopener noreferrer">${r.domain}</a></td>
+      <td>${statusTag(r.status)}</td>
+      <td>${r.code??"—"}</td>
+      <td class="muted">${r.ip?`<a href="https://www.virustotal.com/gui/ip-address/${encodeURIComponent(r.ip)}" target="_blank" rel="noopener noreferrer">${r.ip}</a>`:"—"}</td>
+      <td>${vtTag(r)}</td>
+      <td>${escapeHtml(r.title)}</td>
+      <td>${r.prev_status?statusTag(r.prev_status):"—"}</td>
+      <td class="muted">${fmtDate(r.last_checked)}</td>
+      <td>
+        <button class="secondary" data-recheck="${r.domain}" title="Re-check">↻</button>
+        <button class="secondary" data-clearnew="${r.domain}" ${r.is_new?"":"disabled"} title="Mark as reviewed">✓</button>
+        <button class="danger" data-del="${r.domain}" title="Delete">✕</button>
+      </td>
+    </tr>
+  `).join("");
+  $("#rowCount").textContent = `${rows.length} rows${rows.length>3000?" (showing 3000)":""}`;
+
+  tbody.querySelectorAll("[data-recheck]").forEach(b => b.onclick = () => recheckOne(b.dataset.recheck));
+  tbody.querySelectorAll("[data-clearnew]").forEach(b => b.onclick = () => clearNew(b.dataset.clearnew));
+  tbody.querySelectorAll("[data-del]").forEach(b => b.onclick = () => del(b.dataset.del));
+}
+
+$$("#tbl th[data-sort]").forEach(th=>{
+  th.onclick = ()=>{
+    const k = th.dataset.sort;
+    if(sortKey===k) sortDir = -sortDir; else { sortKey=k; sortDir=1; }
+    render();
+  };
+});
+$("#filterText").oninput        = render;
+$("#filterStatus").onchange     = render;
+$("#filterVt").onchange         = render;
+$("#filterTransitions").onchange= render;
+
+$("#fileInput").onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append("file", f);
+  const r = await fetch("/api/upload", {method:"POST", body:fd}).then(r=>r.json());
+  toast(`Added ${r.added} domains (${r.skipped} skipped)`);
+  e.target.value = "";
+  refresh();
+};
+$("#addBtn").onclick = async ()=>{
+  const v = $("#pasteInput").value;
+  if(!v.trim()) return;
+  const list = v.split(/[\s,;]+/);
+  const r = await api("/api/add", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({domains:list})});
+  toast(`Added ${r.added} domains (${r.skipped} skipped)`);
+  $("#pasteInput").value = "";
+  refresh();
+};
+$("#checkBtn").onclick = async ()=>{
+  await api("/api/check", {method:"POST", headers:{"content-type":"application/json"}, body:"{}"});
+  refresh();
+};
+$("#stopBtn").onclick = async ()=>{ await api("/api/stop", {method:"POST"}); toast("Stop requested"); };
+$("#exportBtn").onclick = ()=>{ window.location = "/api/export"; };
+$("#clearBtn").onclick = async ()=>{
+  if(!confirm("Delete ALL domains and their history?")) return;
+  await api("/api/clear", {method:"POST"}); refresh();
+};
+$("#clearAllNewBtn").onclick = async ()=>{
+  await api("/api/clear_new", {method:"POST", headers:{"content-type":"application/json"}, body:"{}"});
+  refresh();
+};
+$("#saveCfgBtn").onclick = async ()=>{
+  const body = {
+    concurrency: parseInt($("#cfgConc").value)||20,
+    timeout: parseInt($("#cfgTimeout").value)||10,
+    interval_hours: parseFloat($("#cfgInterval").value)||4
+  };
+  await api("/api/settings", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body)});
+  toast("Settings saved");
+  refresh();
+};
+$("#saveVtBtn").onclick = async ()=>{
+  const body = {
+    vt_enabled: $("#cfgVtEnabled").checked,
+    vt_rate_per_min: parseInt($("#cfgVtRate").value)||4,
+    vt_cache_hours: parseFloat($("#cfgVtCache").value)||24,
+  };
+  const key = $("#cfgVtKey").value.trim();
+  if(key) body.vt_api_key = key;
+  await api("/api/settings", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body)});
+  $("#cfgVtKey").value = "";
+  toast("VirusTotal settings saved");
+  refresh();
+};
+$("#clearVtBtn").onclick = async ()=>{
+  if(!confirm("Remove the stored VirusTotal API key?")) return;
+  await api("/api/settings", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({vt_api_key:"__CLEAR__", vt_enabled:false})});
+  toast("VT key removed");
+  refresh();
+};
+
+async function recheckOne(d){
+  await api("/api/check", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({domains:[d]})});
+  refresh();
+}
+async function clearNew(d){
+  await api("/api/clear_new", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({domain:d})});
+  refresh();
+}
+async function del(d){
+  if(!confirm(`Delete ${d}?`)) return;
+  await api("/api/delete", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({domain:d})});
+  refresh();
+}
+
+let toastEl;
+function toast(msg){
+  if(!toastEl){
+    toastEl = document.createElement("div");
+    toastEl.style.cssText = "position:fixed;bottom:20px;right:20px;background:#1d2230;border:1px solid #262c3a;padding:10px 14px;border-radius:6px;color:#e6e9ef;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:1000;transition:opacity .3s";
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = msg;
+  toastEl.style.opacity = 1;
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(()=>{ toastEl.style.opacity = 0; }, 2800);
+}
+
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refresh, 2500);
+}
+
+refresh().then(startPolling);
+</script>
+</body>
+</html>

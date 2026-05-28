@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "domain-monitor"
+version = "0.1.0"
+description = "Self-hosted web tool that monitors look-alike / phishing domains and alerts when inactive domains go live. Optional VirusTotal integration."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Domain Monitor Contributors" }]
+keywords = ["security", "phishing", "domain", "monitor", "virustotal", "threat-intel", "blue-team"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+]
+dependencies = [
+    "Flask>=3.0",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "ruff>=0.5",
+    "build>=1.0",
+    "twine>=4",
+]
+
+[project.urls]
+Homepage      = "https://github.com/Cracka01/domain-monitor"
+Repository    = "https://github.com/Cracka01/domain-monitor"
+Issues        = "https://github.com/Cracka01/domain-monitor/issues"
+Documentation = "https://github.com/Cracka01/domain-monitor#readme"
+
+[project.scripts]
+domain-monitor = "domain_monitor.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+domain_monitor = ["templates/*.html", "static/*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]
