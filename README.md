@@ -37,53 +37,53 @@ manually review the ones that are actually serving content.
 
 ---
 
-## Install
+## Quick start
 
-### Easiest (Windows) — one-click launcher
+> Requires **Python 3.10+** installed and available in `PATH`
+> (<https://www.python.org/downloads/> → make sure you tick
+> *"Add python.exe to PATH"* during install).
 
-Download **[`run.bat`](https://raw.githubusercontent.com/Cracka01/domain-monitor/main/run.bat)**
-into any folder and double-click it. The first run creates a private
-environment under `%LOCALAPPDATA%\DomainMonitor` and installs the package
-straight from GitHub. Subsequent runs just launch the app and open the
-browser. Requires Python 3.10+ in `PATH`
-(<https://www.python.org/downloads/> → tick *Add python.exe to PATH*).
-
-### Cross-platform — pip
-
-```bash
-pip install git+https://github.com/Cracka01/domain-monitor.git
-```
-
-(or `pip install domain-monitor` once published to PyPI).
-
-### From source
+Open a terminal (`cmd`, PowerShell, bash…) and run:
 
 ```bash
 git clone https://github.com/Cracka01/domain-monitor.git
 cd domain-monitor
 pip install -e .
+python -m domain_monitor
+```
+
+That's it. Your browser will open at <http://127.0.0.1:5000>.
+
+Next time you only need the last command:
+
+```bash
+python -m domain_monitor
+```
+
+### Alternative: install without cloning
+
+```bash
+pip install git+https://github.com/Cracka01/domain-monitor.git
+python -m domain_monitor
 ```
 
 ---
 
 ## Usage
 
-After installation a `domain-monitor` command becomes available:
+`python -m domain_monitor` accepts the following options:
 
 ```bash
-domain-monitor                       # http://127.0.0.1:5000, opens browser
-domain-monitor --port 8080           # custom port
-domain-monitor --host 0.0.0.0        # expose on LAN (use with care)
-domain-monitor --no-browser          # headless mode
-domain-monitor --data-dir ./data     # store monitor.db in ./data
-domain-monitor --version
+python -m domain_monitor                       # http://127.0.0.1:5000, opens browser
+python -m domain_monitor --port 8080           # custom port
+python -m domain_monitor --host 0.0.0.0        # expose on LAN (use with care)
+python -m domain_monitor --no-browser          # headless mode
+python -m domain_monitor --data-dir ./data     # store monitor.db in ./data
+python -m domain_monitor --version
 ```
 
-You can also run the module directly:
-
-```bash
-python -m domain_monitor
-```
+A `domain-monitor` console command is also installed as an alias, so
+`domain-monitor --port 8080` works identically.
 
 The web UI exposes everything: CSV upload, manual checks, settings, CSV
 export. State is persisted to `monitor.db` inside the data directory
