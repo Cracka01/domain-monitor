@@ -39,15 +39,22 @@ manually review the ones that are actually serving content.
 
 ## Install
 
-```bash
-pip install domain-monitor
-```
+### Easiest (Windows) — one-click launcher
 
-Or install the latest development version from GitHub:
+Download **[`run.bat`](https://raw.githubusercontent.com/Cracka01/domain-monitor/main/run.bat)**
+into any folder and double-click it. The first run creates a private
+environment under `%LOCALAPPDATA%\DomainMonitor` and installs the package
+straight from GitHub. Subsequent runs just launch the app and open the
+browser. Requires Python 3.10+ in `PATH`
+(<https://www.python.org/downloads/> → tick *Add python.exe to PATH*).
+
+### Cross-platform — pip
 
 ```bash
 pip install git+https://github.com/Cracka01/domain-monitor.git
 ```
+
+(or `pip install domain-monitor` once published to PyPI).
 
 ### From source
 
