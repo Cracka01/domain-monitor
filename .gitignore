@@ -11,9 +11,10 @@ venv/
 env/
 ENV/
 
-# Distribution / packaging
+# Distribution / packaging (PyInstaller + setuptools)
 build/
 dist/
+*.spec.bak
 *.egg-info/
 *.egg
 .eggs/
